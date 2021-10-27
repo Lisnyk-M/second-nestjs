@@ -84,7 +84,7 @@ export class UsersService {
         const params = {
             Bucket: bucketS3,
             Key: originalname,
-            Body: file.buffer,
+            Body: file.buffer, 
         }
 
         const command = new GetObjectCommand(params);
