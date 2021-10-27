@@ -10,7 +10,10 @@ import { CreateUserDto } from './create-user.dto';
 import { User } from './user.entity';
 import { GetUserResponseDto } from 'src/dto/get.user.response';
 
-const REGION = "eu-west-2";
+require('dotenv').config();
+
+const REGION = process.env.REGION;
+const BUCKET_S3 = process.env.BUCKET_S3;
 
 @Injectable()
 export class UsersService {
@@ -44,7 +47,7 @@ export class UsersService {
     }
 
     async update(object: any): Promise<any> {
-        this.usersRepository.save(object,);
+        this.usersRepository.save(object);
     }
 
     async getUser(id: string): Promise<any> {
@@ -75,14 +78,12 @@ export class UsersService {
             throw new HttpException('User not found', HttpStatus.NOT_FOUND)
         }
 
-        const bucketS3 = 'bucket-my-12345-end';
-        const pathFile = `https://${bucketS3}.s3.${REGION}.amazonaws.com/${originalname}`;
-        console.log('pathFile: ', pathFile);
+        const pathFile = `https://${BUCKET_S3}.s3.${REGION}.amazonaws.com/${originalname}`;
         const updated = await this.usersRepository.update({ email }, { filename: pathFile });
-        const data = await this.uploadS3(file.buffer, bucketS3, originalname);
+        const data = await this.uploadS3(file.buffer, BUCKET_S3, originalname);
 
         const params = {
-            Bucket: bucketS3,
+            Bucket: BUCKET_S3,
             Key: originalname,
             Body: file.buffer, 
         }
