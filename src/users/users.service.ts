@@ -1,33 +1,37 @@
 import { Injectable, NotFoundException, HttpException, HttpStatus, } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {ConfigService} from '@nestjs/config';
 
-import { S3Client } from "@aws-sdk/client-s3";
+import { S3Client } from "@aws-sdk/client-s3";  //aws.docs
+import * as AWS from 'aws-sdk';
 import { PutObjectCommand, GetObjectCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { CreateUserDto } from './create-user.dto';
 import { User } from './user.entity';
 import { GetUserResponseDto } from 'src/dto/get.user.response';
-
-require('dotenv').config();
-
-const REGION = process.env.REGION;
-const BUCKET_S3 = process.env.BUCKET_S3;
+import * as path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User)
         private usersRepository: Repository<User>,
+        private configService: ConfigService
     ) { }
 
     getHello(): string {
         return 'Hello World!';
     }
 
-    findAll(): Promise<User[]> {
-        return this.usersRepository.find();
+    async findAll(): Promise<User[]> {
+        const users = await this.usersRepository.find();
+        const filteredUsers = users.map(user => {
+            delete user.password;
+            return user;
+        })
+        return filteredUsers;
     }
 
     findOne(email: string): Promise<User> {
@@ -64,36 +68,43 @@ export class UsersService {
     }
 
     getS3() {
-        return new S3Client({ region: REGION });
+        const config = {
+            accessKeyId: this.configService.get<string>('accessKeyId'),
+            secretAccessKey: this.configService.get<string>('secretAccessKey'),
+            region: this.configService.get<string>('REGION'),
+            sslEnabled: false,
+            s3ForcePathStyle: true
+        };
+
+        return new AWS.S3(config);
     }
 
     async upload(file, email) {
         if (!file) {
             throw new HttpException('file did not load', HttpStatus.BAD_REQUEST);
         }
+        
+        const BUCKET_S3 = this.configService.get<string>('BUCKET_S3');
+        const REGION = this.configService.get<string>('REGION');
         const { originalname } = file;
+        const extention = path.extname(originalname);
         const findUser = await this.findByEmail(email);
 
         if (!findUser) {
             throw new HttpException('User not found', HttpStatus.NOT_FOUND)
         }
 
-        const pathFile = `https://${BUCKET_S3}.s3.${REGION}.amazonaws.com/${originalname}`;
-        const updated = await this.usersRepository.update({ email }, { filename: pathFile });
-        const data = await this.uploadS3(file.buffer, BUCKET_S3, originalname);
-
-        const params = {
-            Bucket: BUCKET_S3,
-            Key: originalname,
-            Body: file.buffer, 
+        const backetPathFile = `https://${BUCKET_S3}.s3.${REGION}.amazonaws.com/`;
+        const uniqueFileName = uuidv4();
+        const fullFileName = backetPathFile + uniqueFileName + extention;
+        const uniqueWithExt = uniqueFileName + extention;
+        const uploaded = await this.uploadS3(file.buffer, BUCKET_S3, uniqueWithExt);
+        if (!uploaded) {
+            throw new HttpException('Error upload', HttpStatus.NOT_FOUND);
         }
-
-        const command = new GetObjectCommand(params);
-        const signedUrl = await getSignedUrl(this.getS3(), command, {
-            expiresIn: 3600,
-        });
-
-        return { pathFile };
+        await this.usersRepository.update({ email }, { filename: uniqueWithExt });
+        
+        return { fullFileName };
     }
 
     async uploadS3(file, bucket, name) {
@@ -102,13 +113,14 @@ export class UsersService {
             Bucket: bucket,
             Key: String(name),
             Body: file,
+            ContentType: 'image/jpeg'
         };
         return new Promise((resolve, reject) => {
-            s3.send(new PutObjectCommand(params), (err, data) => {
+            s3.upload((params), (err, data) => {
                 if (err) {
-                    reject(err.message);
+                    return reject(err.message);
                 }
-                resolve(data);
+                return resolve(data);
             });
 
         });

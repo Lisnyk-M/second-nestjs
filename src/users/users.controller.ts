@@ -2,7 +2,7 @@ import { Controller, UseGuards, Delete, Param, Post, Get, Body, Req } from '@nes
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiResponse, ApiOperation } from '@nestjs/swagger';
+import { ApiResponse, ApiOperation, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { UsersResponseDto } from '../dto/get.users.response';
@@ -18,9 +18,10 @@ export class UsersController {
         return this.usersService.getHello();
     }
 
-    @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'Get all users' })
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
     @ApiResponse({
         status: 200,
         description: 'Get all users',
@@ -31,6 +32,7 @@ export class UsersController {
         return this.usersService.findAll();
     }
 
+    @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('/:id')
     @ApiOperation({ summary: 'Get user' })
@@ -43,6 +45,7 @@ export class UsersController {
         return this.usersService.getUser(id);
     }
 
+    @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Delete('/:id')
     @ApiOperation({ summary: 'Delete user' })
@@ -55,12 +58,14 @@ export class UsersController {
         return await this.usersService.remove(id);
     }
 
+    @ApiHeader({name: 'Content-Type', description: 'image/jpeg'})
+    @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @UseInterceptors(FileInterceptor('file', {
         limits: {
             fileSize: 1024 * 1024,
         },
-        fileFilter: fileFilter
+        fileFilter
     }))
     @Post('/upload')
     async uploadFile(@Body() body: String,
