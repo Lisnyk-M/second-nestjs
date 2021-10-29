@@ -1,4 +1,4 @@
-import { Controller, UseGuards, Delete, Param, Post, Get, Body, Req } from '@nestjs/common';
+import { Controller, UseGuards, Delete, Param, Post, Get, Body, Req, ClassSerializerInterceptor } from '@nestjs/common';
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -9,9 +9,11 @@ import { UsersResponseDto } from '../dto/get.users.response';
 import { GetUserResponseDto } from '../dto/get.user.response';
 import { fileFilter } from '../common/helper/file-filter.helper';
 
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(ClassSerializerInterceptor)
 @Controller('/users')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }
+    constructor(private readonly usersService: UsersService) { }    
 
     @Get('/hello')
     getHello(): string {
@@ -21,19 +23,17 @@ export class UsersController {
     @Get()
     @ApiOperation({ summary: 'Get all users' })
     @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard)
     @ApiResponse({
         status: 200,
         description: 'Get all users',
         type: UsersResponseDto,
         isArray: true,
-    })
+    })    
     getAll(): Promise<UsersResponseDto[]> {
         return this.usersService.findAll();
     }
 
     @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard)
     @Get('/:id')
     @ApiOperation({ summary: 'Get user' })
     @ApiResponse({
@@ -46,7 +46,6 @@ export class UsersController {
     }
 
     @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard)
     @Delete('/:id')
     @ApiOperation({ summary: 'Delete user' })
     @ApiResponse({
@@ -58,9 +57,7 @@ export class UsersController {
         return await this.usersService.remove(id);
     }
 
-    @ApiHeader({name: 'Content-Type', description: 'image/jpeg'})
     @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard)
     @UseInterceptors(FileInterceptor('file', {
         limits: {
             fileSize: 1024 * 1024,
@@ -72,7 +69,7 @@ export class UsersController {
         @UploadedFile() file: Express.Multer.File,
         @Req() req
     ) {
-        const pathFile = await this.usersService.upload(file, req.user.email);
+        const pathFile = await this.usersService.changeAvatar(file, req.user.email);
         return pathFile;
     }
 

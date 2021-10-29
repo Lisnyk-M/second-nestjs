@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, HttpException, HttpStatus, } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {ConfigService} from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 
 import { S3Client } from "@aws-sdk/client-s3";  //aws.docs
 import * as AWS from 'aws-sdk';
@@ -12,6 +12,7 @@ import { User } from './user.entity';
 import { GetUserResponseDto } from 'src/dto/get.user.response';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import {appConfig} from '../common/helper/config.aws';
 
 @Injectable()
 export class UsersService {
@@ -26,12 +27,7 @@ export class UsersService {
     }
 
     async findAll(): Promise<User[]> {
-        const users = await this.usersRepository.find();
-        const filteredUsers = users.map(user => {
-            delete user.password;
-            return user;
-        })
-        return filteredUsers;
+        return this.usersRepository.find();
     }
 
     findOne(email: string): Promise<User> {
@@ -56,54 +52,46 @@ export class UsersService {
 
     async getUser(id: string): Promise<any> {
         const user = await this.usersRepository.findOne(id);
-
         if (!user) {
             throw new NotFoundException();
         }
-        const getUserResponseDto = new GetUserResponseDto();
-        getUserResponseDto.id = id;
-        getUserResponseDto.email = user.email;
 
-        return getUserResponseDto;
+        return user;
     }
 
     getS3() {
-        const config = {
-            accessKeyId: this.configService.get<string>('accessKeyId'),
-            secretAccessKey: this.configService.get<string>('secretAccessKey'),
-            region: this.configService.get<string>('REGION'),
-            sslEnabled: false,
-            s3ForcePathStyle: true
-        };
-
-        return new AWS.S3(config);
+        this.configService.get('INVITATION_TOKEN_HOURS_DURATION');
+        return new AWS.S3(appConfig());
     }
 
-    async upload(file, email) {
+    getName(file) {
+        const BUCKET_S3 = this.configService.get('BUCKET_S3');
+        const REGION = this.configService.get('REGION');
+        const { originalname } = file;
+        const backetPathFile = `https://${BUCKET_S3}.s3.${REGION}.amazonaws.com/`;
+        const uniqueFileName = uuidv4() + path.extname(originalname);
+        const fullFileName = backetPathFile + uniqueFileName;
+
+        return { uniqueFileName, fullFileName, BUCKET_S3 };
+    }
+
+    async changeAvatar(file, email) {
+        const { uniqueFileName, fullFileName, BUCKET_S3 } = this.getName(file);
         if (!file) {
             throw new HttpException('file did not load', HttpStatus.BAD_REQUEST);
         }
-        
-        const BUCKET_S3 = this.configService.get<string>('BUCKET_S3');
-        const REGION = this.configService.get<string>('REGION');
-        const { originalname } = file;
-        const extention = path.extname(originalname);
-        const findUser = await this.findByEmail(email);
 
+        const findUser = await this.findByEmail(email);
         if (!findUser) {
-            throw new HttpException('User not found', HttpStatus.NOT_FOUND)
+            throw new HttpException('User not found', HttpStatus.NOT_FOUND);
         }
 
-        const backetPathFile = `https://${BUCKET_S3}.s3.${REGION}.amazonaws.com/`;
-        const uniqueFileName = uuidv4();
-        const fullFileName = backetPathFile + uniqueFileName + extention;
-        const uniqueWithExt = uniqueFileName + extention;
-        const uploaded = await this.uploadS3(file.buffer, BUCKET_S3, uniqueWithExt);
+        const uploaded = await this.uploadS3(file.buffer, BUCKET_S3, uniqueFileName);
         if (!uploaded) {
             throw new HttpException('Error upload', HttpStatus.NOT_FOUND);
         }
-        await this.usersRepository.update({ email }, { filename: uniqueWithExt });
-        
+        await this.usersRepository.update({ email }, { filename: uniqueFileName });
+
         return { fullFileName };
     }
 
