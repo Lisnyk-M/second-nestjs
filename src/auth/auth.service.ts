@@ -37,7 +37,7 @@ export class AuthService {
             throw new NotFoundException();
         }
 
-        const payload = { email: createUserDto.email };
+        const payload = { email: createUserDto.email, id: user.id };
 
         return {
             accessToken: this.jwtService.sign(payload),
