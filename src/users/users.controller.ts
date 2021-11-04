@@ -8,12 +8,13 @@ import { UsersService } from './users.service';
 import { UsersResponseDto } from '../dto/get.users.response';
 import { GetUserResponseDto } from '../dto/get.user.response';
 import { fileFilter } from '../common/helper/file-filter.helper';
+import { Number } from 'aws-sdk/clients/iot';
 
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('/users')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }    
+    constructor(private readonly usersService: UsersService) { }
 
     @Get('/hello')
     getHello(): string {
@@ -28,7 +29,7 @@ export class UsersController {
         description: 'Get all users',
         type: UsersResponseDto,
         isArray: true,
-    })    
+    })
     getAll(): Promise<UsersResponseDto[]> {
         return this.usersService.findAll();
     }
@@ -41,7 +42,7 @@ export class UsersController {
         description: 'User not found',
     })
     @ApiResponse({ status: 200, description: '' })
-    async getUser(@Param('id') id: string, @Req() req): Promise<GetUserResponseDto> {
+    async getUser(@Param('id') id: number, @Req() req): Promise<GetUserResponseDto> {
         return this.usersService.getUser(id);
     }
 
@@ -72,5 +73,32 @@ export class UsersController {
         const pathFile = await this.usersService.changeAvatar(file, req.user.email);
         return pathFile;
     }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Add company to user' })
+    @Get('/company-add/:id')
+    @ApiResponse({
+        status: 200,
+        description: 'company is created',
+    })
+    async userAddCompany(@Param('id') id: number, @Req() req): Promise<void> {
+        const { userId } = req.user;
+        console.log('userId: ', userId);
+        return await this.usersService.addCompany(id, userId);
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Remove company from user' })
+    @Get('/company-delete/:id')
+    @ApiResponse({
+        status: 200,
+        description: 'company is created',
+    })
+    async userDeleteCompany(@Param('id') id: number, @Req() req): Promise<void> {
+        const { userId } = req.user;
+        console.log('userId: ', userId);
+        return await this.usersService.removeCompany(id, userId);
+    }
+    
 
 }

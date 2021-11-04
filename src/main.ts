@@ -4,11 +4,11 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {cors: true});
+  const app = await NestFactory.create(AppModule, { cors: true });
   const config = new DocumentBuilder()
     .setTitle('Nestjs first task')
     .setDescription('The nestjs API description')
-    .setVersion('1.0')   
+    .setVersion('1.0')
     .addTag('nestjs')
     .addBearerAuth()
     .build();

@@ -12,14 +12,19 @@ import { User } from './user.entity';
 import { GetUserResponseDto } from 'src/dto/get.user.response';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import {appConfig} from '../common/helper/config.aws';
+import { appConfig } from '../common/helper/config.aws';
+import { UsersCompany } from '../users.company/users.company.entity';
+import { UsersCompanyRoleService } from 'src/users-company-role/users-company-role.service';
+import { UsersCompanyService } from 'src/users.company/users.company.service';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User)
         private usersRepository: Repository<User>,
-        private configService: ConfigService
+        private configService: ConfigService,
+        private usersCompanyServise: UsersCompanyService,
+        private usersCompanyRoleService: UsersCompanyRoleService,
     ) { }
 
     getHello(): string {
@@ -50,13 +55,24 @@ export class UsersService {
         this.usersRepository.save(object);
     }
 
-    async getUser(id: string): Promise<any> {
+    async getUser(id: number): Promise<any> {
         const user = await this.usersRepository.findOne(id);
         if (!user) {
             throw new NotFoundException();
         }
-
+        this.addCompany(3, 11);
         return user;
+    }
+
+    async addCompany(companyId: number, userId: number): Promise<any> {
+        const result = await this.usersCompanyServise.add(companyId, userId);
+        return { message: `company is added to user with id: ${userId}` }
+    }
+
+    async removeCompany(companyId: number, userId: number): Promise<any> {
+        const result = await this.usersCompanyServise.deleteCompany(companyId, userId);
+        const deletedUCR = await this.usersCompanyRoleService.deleteUCR(companyId, userId);
+        return { message: 'company deleted from user' };
     }
 
     getS3() {
