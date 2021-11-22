@@ -1,73 +1,92 @@
-import { Injectable, HttpException, HttpStatus, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  BadRequestException,
+  NotFoundException,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from '../users/create-user.dto';
-import { UsersService } from '../index-services';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from 'src/users/user.entity';
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+import { UsersService } from 'src/users/users.service';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
-require('dotenv').config();
+// const bcrypt = require('bcrypt');
+// const jwt = require('jsonwebtoken');
 
 @Injectable()
 export class AuthService {
-    constructor(
-        @InjectRepository(User)
-        private userRepository: Repository<User>,
-        // private usersService: UsersService,
-        private readonly jwtService: JwtService
-    ) { }
+  constructor(
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) {}
 
-    async validateUser(createUserDto: CreateUserDto): Promise<any> {
-        const { email, password } = createUserDto;
-        // const user = await this.usersService.findByEmail(email);
-        const user = await this.userRepository.findOne({
-            where: {
-                email
-            }
-        })
-        
-        if (!user) {
-            throw new HttpException('Email or password is wrong.', HttpStatus.NOT_FOUND);
-        }
+  async validateUser(createUserDto: CreateUserDto): Promise<any> {
+    const { email, password } = createUserDto;
+    const user = await this.usersService.findByEmail(email);
+    // const user = await this.userRepository.findOne({
+    //   where: {
+    //     email,
+    //   },
+    // });
 
-        const compared = await bcrypt.compare(password, user.password);
-
-        if (!compared) {
-            throw new HttpException('Email or password is wrong.', HttpStatus.NOT_FOUND);
-        }
-        return { ...user };
+    if (!user) {
+      throw new HttpException(
+        'Email or password is wrong.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
-    async login(createUserDto: CreateUserDto) {
-        const user = await this.validateUser(createUserDto);
-        // const { id, email} = createUserDto; 
+    const compared = await bcrypt.compare(password, user.password);
 
-        if (!user) {
-            throw new NotFoundException();
-        }
+    if (!compared) {
+      throw new HttpException(
+        'Email or password is wrong.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return { ...user };
+  }
 
-        const payload = { email: createUserDto.email, id: user.id };
+  async login(createUserDto: CreateUserDto) {
+    const user = await this.validateUser(createUserDto);
+    // const { id, email} = createUserDto;
 
-        return {
-            accessToken: this.jwtService.sign(payload),
-        };
+    if (!user) {
+      throw new NotFoundException();
     }
 
-    async save(createUserDto: CreateUserDto): Promise<object> {
-        let result = undefined;
-        const SALT_FACTOR = 8;
+    const payload = { email: createUserDto.email, id: user.id };
 
-        // const findUser = await this.usersService.findByEmail(createUserDto.email);
-        // if (findUser) {
-        //     throw new HttpException('User already in database', HttpStatus.BAD_REQUEST);
-        // }
+    return {
+      accessToken: this.jwtService.sign(payload),
+    };
+  }
 
-        const hashPassword = await bcrypt.hash(createUserDto.password.toString(), SALT_FACTOR);
-        const toSave = { ...createUserDto, token: '', password: hashPassword, filename: '' };
-        // result = await this.usersService.save(toSave);
+  async save(createUserDto: CreateUserDto): Promise<any> {
+    const result = undefined;
+    const SALT_FACTOR = 8;
 
-        return { message: "user created successfully" };
-    }
+    // const findUser = await this.usersService.findByEmail(createUserDto.email);
+    // if (findUser) {
+    //     throw new HttpException('User already in database', HttpStatus.BAD_REQUEST);
+    // }
+
+    const hashPassword = await bcrypt.hash(
+      createUserDto.password.toString(),
+      SALT_FACTOR,
+    );
+    const toSave = {
+      ...createUserDto,
+      token: '',
+      password: hashPassword,
+      filename: '',
+    };
+    // result = await this.usersService.save(toSave);
+
+    return { message: 'user created successfully' };
+  }
 }

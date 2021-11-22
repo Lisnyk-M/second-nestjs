@@ -3,34 +3,40 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule, UsersCompanyRoleModule, CompanyModule, RoleModule, AuthModule  } from './index-modules';
+import {
+  UsersModule,
+  UsersCompanyRoleModule,
+  CompanyModule,
+  RoleModule,
+  AuthModule,
+} from './index-modules';
 
 @Module({
   imports: [
-    UsersModule,
+    ConfigModule.forRoot(),
     AuthModule,
+    UsersModule,
     CompanyModule,
     UsersCompanyRoleModule,
     RoleModule,
-    ConfigModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
       port: 5432,
       username: 'test',
       password: 'test',
-      database: 'test',
+      database: 'nest_app',
       entities: [
-        "dist/users/user.entity.js",
-        "dist/company/company.entity.js",
-        "dist/users.company/users.company.entity.js",
-        "dist/role/role.entity.js",
-        "dist/users-company-role/users-company-role.entity.js"
+        'dist/users/user.entity.js',
+        'dist/company/company.entity.js',
+        'dist/users.company/users.company.entity.js',
+        'dist/role/role.entity.js',
+        'dist/users-company-role/users-company-role.entity.js',
       ],
       synchronize: true,
     }),
   ],
   controllers: [AppController],
-  providers: [AppService]
+  providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
