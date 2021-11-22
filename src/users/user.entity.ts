@@ -1,8 +1,9 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, OneToMany, ManyToMany, PrimaryGeneratedColumn, JoinTable } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 import { Exclude, Expose, Transform } from 'class-transformer';
-import { UsersCompany } from "src/users.company/users.company.entity";
+// import { UsersCompany } from "src/users.company/users.company.entity";
 import { UsersCompanyRole } from "src/users-company-role/users-company-role.entity";
+import { Companys } from '../company/company.entity';
 
 @Entity()
 export class User {
@@ -25,8 +26,21 @@ export class User {
   @Column()
   filename: string;
 
-  @OneToMany(() => UsersCompany, usersCompany => usersCompany.user)
-  usersCompanys: UsersCompany[]
+  @ManyToMany(() => Companys, companys => companys.users)
+  @JoinTable(
+  //   {
+  //   name: "user_company", // table name for the junction table of this relation
+  //   joinColumn: {
+  //     name: "user",
+  //     referencedColumnName: "id"
+  //   },
+  //   inverseJoinColumn: {
+  //     name: "company",
+  //     referencedColumnName: "id"
+  //   }
+  // }
+  )
+  companies: Companys[];
 
   @OneToMany(() => UsersCompanyRole, usersCompanyRole => usersCompanyRole.user)
   usersCompanyRoles: UsersCompanyRole[]

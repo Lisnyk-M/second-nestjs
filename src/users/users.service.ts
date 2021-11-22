@@ -2,20 +2,14 @@ import { Injectable, NotFoundException, HttpException, HttpStatus, } from '@nest
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-
-import { S3Client } from "@aws-sdk/client-s3";  //aws.docs
 import * as AWS from 'aws-sdk';
-import { PutObjectCommand, GetObjectCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
-
-import { CreateUserDto } from './create-user.dto';
-import { User } from './user.entity';
-import { GetUserResponseDto } from 'src/dto/get.user.response';
+import { appConfig } from '../common/helper/config.aws';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { appConfig } from '../common/helper/config.aws';
-import { UsersCompany } from '../users.company/users.company.entity';
-import { UsersCompanyRoleService } from 'src/users-company-role/users-company-role.service';
-import { UsersCompanyService } from 'src/users.company/users.company.service';
+import { CreateUserDto } from './create-user.dto';
+import { User } from './user.entity';
+import { CompanysService } from '../index-services';
+import { UsersCompanyRoleService } from '../index-services';
 
 @Injectable()
 export class UsersService {
@@ -23,8 +17,8 @@ export class UsersService {
         @InjectRepository(User)
         private usersRepository: Repository<User>,
         private configService: ConfigService,
-        private usersCompanyServise: UsersCompanyService,
         private usersCompanyRoleService: UsersCompanyRoleService,
+        private companyService: CompanysService,
     ) { }
 
     getHello(): string {
@@ -55,22 +49,45 @@ export class UsersService {
         this.usersRepository.save(object);
     }
 
-    async getUser(id: number): Promise<any> {
+    async getUser(id: number): Promise<User> {
         const user = await this.usersRepository.findOne(id);
         if (!user) {
             throw new NotFoundException();
         }
-        this.addCompany(3, 11);
+        // this.addCompany(3, 11);
         return user;
     }
 
+    async getUserCompany(companyId: number, userId: number): Promise<any> {
+        const company = await this.companyService.getCompany(companyId);
+        if (!company){
+            return new HttpException('Company not found', HttpStatus.NOT_FOUND);
+        }
+        const user = await this.usersRepository.findOne(userId, {relations: ["companies"]});
+
+        console.log('userrrrrrrrrrrr: ', user);
+    }
+
     async addCompany(companyId: number, userId: number): Promise<any> {
-        const result = await this.usersCompanyServise.add(companyId, userId);
+        const company = await this.companyService.getCompany(companyId);
+        if (!company) {
+            return new HttpException('Company not found', HttpStatus.NOT_FOUND);
+        }
+
+        const user1 = await this.usersRepository.findOne(userId);
+        company.users = [user1];
+
+        const addCompanyResult = await this.usersRepository.manager.save(company);
+        if (!addCompanyResult) {
+            return new HttpException('Save failed', HttpStatus.BAD_REQUEST);
+        }
+        // console.log('addCompanyResult: ', addCompanyResult);
+
         return { message: `company is added to user with id: ${userId}` }
     }
 
     async removeCompany(companyId: number, userId: number): Promise<any> {
-        const result = await this.usersCompanyServise.deleteCompany(companyId, userId);
+        // const result = await this.usersCompanyServise.deleteCompany(companyId, userId);
         const deletedUCR = await this.usersCompanyRoleService.deleteUCR(companyId, userId);
         return { message: 'company deleted from user' };
     }

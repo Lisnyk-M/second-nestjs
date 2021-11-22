@@ -2,7 +2,9 @@ import { Controller, Get, Post, Body } from '@nestjs/common';
 import { CompanysService } from './companys.service';
 import { CreateCompanyDto } from '../dto/company/create.company';
 import { Companys } from './company.entity';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('companys')
 @Controller('/companys')
 export class CompanyController {
     constructor(
@@ -21,5 +23,11 @@ export class CompanyController {
     async sqlRequest(): Promise<Companys> {
         return this.companysService.sendSQL();
     }
+
+    @Get("hello")
+    async sqlRequest1(): Promise<Companys> {
+        return this.companysService.getCompanyUser(4, 16);
+    }
+
 }
 

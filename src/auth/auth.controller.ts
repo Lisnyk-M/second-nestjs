@@ -43,6 +43,7 @@ export class AuthController {
     })
     @ApiResponse({ status: 404, description: 'User not found.' })
     async login(@Body() createUserDto: CreateUserDto): Promise<any> {
+        // console.log('createUserDto: ', createUserDto);
         const loginedUser = await this.authService.login(createUserDto);
         return loginedUser;
     }

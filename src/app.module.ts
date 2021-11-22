@@ -1,24 +1,17 @@
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { CompanyModule } from './company/company.module';
-import { UsersCompanyModule } from './users.company/users.company.module';
-import { RoleService } from './role/role.service';
-import { RoleController } from './role/role.controller';
-import { RoleModule } from './role/role.module';
-import { UsersCompanyRoleModule } from './users-company-role/users-company-role.module';
-import { UsersCompanyRoleService } from './users-company-role/users-company-role.service';
-import { UsersCompanyService } from './users.company/users.company.service';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { UsersModule, UsersCompanyRoleModule, CompanyModule, RoleModule, AuthModule  } from './index-modules';
 
 @Module({
   imports: [
     UsersModule,
     AuthModule,
     CompanyModule,
+    UsersCompanyRoleModule,
+    RoleModule,
     ConfigModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -36,9 +29,6 @@ import { UsersCompanyService } from './users.company/users.company.service';
       ],
       synchronize: true,
     }),
-    UsersCompanyModule,    
-    UsersCompanyRoleModule,    
-    RoleModule,
   ],
   controllers: [AppController],
   providers: [AppService]

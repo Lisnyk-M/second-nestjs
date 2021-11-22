@@ -4,19 +4,23 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/user.entity';
 import { Companys } from 'src/company/company.entity';
-import { CompanysService } from '../company/companys.service';
 import { Role } from '../role/role.entity';
-import { RoleService } from 'src/role/role.service';
-import { UsersCompanyService } from 'src/users.company/users.company.service';
+import { RoleService, CompanysService, UsersService } from '../index-services';
 
 @Injectable()
 export class UsersCompanyRoleService {
     constructor(
         @InjectRepository(UsersCompanyRole)
         private usersCompanyRoleRepository: Repository<UsersCompanyRole>,
+
+        @InjectRepository(Companys)
         private companysService: CompanysService,
+
+        @InjectRepository(Role)
         private roleServise: RoleService,
-        private userCompanysService: UsersCompanyService,
+
+        @InjectRepository(User)
+        private userService: UsersService,
     ) { }
 
     async addRole(companyId: number, userId: number, roleId: number): Promise<object> {
@@ -30,8 +34,10 @@ export class UsersCompanyRoleService {
             throw new HttpException('Role is not available', HttpStatus.FORBIDDEN);
         }
 
-        const findUserCompanyRec = await this.userCompanysService.getUserCompanyRec(userId, companyId);
-        if (!findUserCompanyRec) {
+        const getedCompany = await this.userService.getUserCompany(companyId, userId);
+        console.log('getedCompany: ', getedCompany);
+
+        if (!getedCompany) {
             throw new HttpException(`user with Id: ${userId} not found in company with Id: ${companyId} `, HttpStatus.NOT_FOUND);
         }
 
@@ -48,7 +54,7 @@ export class UsersCompanyRoleService {
             throw new HttpException(`role with id: ${roleId} already exist in user with id: ${userId}`, HttpStatus.CONFLICT);
         }
 
-        console.log('findUserCompanyRec: ', findUserCompanyRec);
+        // console.log('findUserCompanyRec: ', findUserCompanyRec);
 
         const user = new User({});
         const company = new Companys();
@@ -66,20 +72,20 @@ export class UsersCompanyRoleService {
         return { message: 'role added' };
     }
 
-    async deleteUCR(companyId: number, userId: number): Promise<any>{
+    async deleteUCR(companyId: number, userId: number): Promise<any> {
         const deleted = await this.usersCompanyRoleRepository.delete({
-            company: {id: companyId},
-            user: {id: userId},
+            company: { id: companyId },
+            user: { id: userId },
         });
 
         console.log('deleteUCR: ', deleted);
     }
 
-    async deleteRole(companyId: number, userId: number, roleId: number): Promise<any>{
+    async deleteRole(companyId: number, userId: number, roleId: number): Promise<any> {
         const deleted = await this.usersCompanyRoleRepository.delete({
-            company: {id: companyId},
-            user: {id: userId},
-            role: {id: roleId},
+            company: { id: companyId },
+            user: { id: userId },
+            role: { id: roleId },
         });
 
         console.log('deleteUCR: ', deleted);

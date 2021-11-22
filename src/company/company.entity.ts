@@ -1,8 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn, OneToMany, ManyToMany } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 import { Exclude, Expose, Transform } from 'class-transformer';
-import {UsersCompany} from '../users.company/users.company.entity';
+// import {UsersCompany} from '../users.company/users.company.entity';
 import { UsersCompanyRole } from "src/users-company-role/users-company-role.entity";
+import { User } from "src/users/user.entity";
 
 @Entity()
 export class Companys {
@@ -18,8 +19,8 @@ export class Companys {
     // @Exclude()
     description: string;
 
-    @OneToMany(() => UsersCompany, usersCompany => usersCompany.company)
-    usersCompanys: UsersCompany[]
+    @ManyToMany(() => User, user => user.companies)
+    users: User[];
 
     @OneToMany(() => UsersCompanyRole, usersCompanyRole => usersCompanyRole.company)
     usersCompanyRoles: UsersCompanyRole[]

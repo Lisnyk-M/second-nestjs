@@ -2,7 +2,7 @@ import { Controller, UseGuards, Delete, Param, Post, Get, Body, Req, ClassSerial
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiResponse, ApiOperation, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
+import { ApiResponse, ApiOperation, ApiBearerAuth, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { UsersResponseDto } from '../dto/get.users.response';
@@ -12,6 +12,7 @@ import { Number } from 'aws-sdk/clients/iot';
 
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(ClassSerializerInterceptor)
+@ApiTags('users')
 @Controller('/users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
@@ -42,7 +43,7 @@ export class UsersController {
         description: 'User not found',
     })
     @ApiResponse({ status: 200, description: '' })
-    async getUser(@Param('id') id: number, @Req() req): Promise<GetUserResponseDto> {
+    async getUser(@Param('id') id: number, @Req() req): Promise<any> {
         return this.usersService.getUser(id);
     }
 
@@ -84,6 +85,7 @@ export class UsersController {
     async userAddCompany(@Param('id') id: number, @Req() req): Promise<void> {
         const { userId } = req.user;
         console.log('userId: ', userId);
+        await this.usersService.getUserCompany(id, 16);
         return await this.usersService.addCompany(id, userId);
     }
 
@@ -97,7 +99,7 @@ export class UsersController {
     async userDeleteCompany(@Param('id') id: number, @Req() req): Promise<void> {
         const { userId } = req.user;
         console.log('userId: ', userId);
-        return await this.usersService.removeCompany(id, userId);
+        // return await this.usersService.removeCompany(id, userId);
     }
     
 
